@@ -1,0 +1,50 @@
+[package]
+name = "compsvg"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+[dependencies.robmikh-common]
+path = "../robmikh-common-rs"
+features = [
+    "d3d",
+    "d2d",
+]
+
+[dependencies.windows]
+version = "0.28.0"
+features = [
+    "alloc",
+    "build",
+    "Foundation",
+    "Foundation_Collections",
+    "Foundation_Metadata",
+    "Foundation_Numerics",
+    "UI",
+    "UI_Composition",
+    "Graphics",
+    "Win32_Foundation",
+    "Win32_System_Com",
+    "Win32_System_WinRT",
+]
+
+[dev-dependencies.robmikh-common]
+path = "../robmikh-common-rs"
+features = [
+    "dispatcher-queue-desktop",
+    "stream",
+]
+
+[dev-dependencies.windows]
+version = "0.28.0"
+features = [
+    "Graphics",
+    "Graphics_DirectX",
+    "Graphics_DirectX_Direct3D11",
+    "Graphics_Capture",
+    "Graphics_Imaging",
+    "UI_Composition_Core",
+    "Storage",
+    "Storage_Streams",
+]
