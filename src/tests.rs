@@ -7,7 +7,9 @@ use robmikh_common::{
         d3d::{
             copy_texture, create_d3d_device, create_direct3d_device, get_d3d_interface_from_object,
         },
+        null_return::NullReturn,
         stream::AsIStream,
+        try_cast::TryCast,
     },
 };
 use windows::{
@@ -36,7 +38,10 @@ use windows::{
         },
         System::WinRT::{RoInitialize, RO_INIT_MULTITHREADED},
     },
-    UI::Composition::{Compositor, Core::CompositorController, Visual},
+    UI::Composition::{
+        CompositionColorBrush, CompositionContainerShape, CompositionShape, CompositionSpriteShape,
+        Compositor, Core::CompositorController, Visual,
+    },
 };
 
 use crate::{convert_svg_document_to_composition_shapes, SvgCompositionShapes};
@@ -249,9 +254,49 @@ fn dump_card_to_png(runtime: &TestRuntime, card_name: &str) -> Result<()> {
 }
 
 #[test]
-fn king_of_diamonds() -> Result<()> {
+fn king_of_diamonds_png_dump() -> Result<()> {
     unsafe { RoInitialize(RO_INIT_MULTITHREADED)? };
     let runtime = TestRuntime::new()?;
     dump_card_to_png(&runtime, "king_of_diamonds")?;
+    Ok(())
+}
+
+fn process_shape_for_info_dump(shape: &CompositionShape, comment_query: &str) -> Result<()> {
+    if shape.Comment()? == comment_query {
+        let container: CompositionContainerShape = shape.cast()?;
+        let first_child = container.Shapes()?.First()?.next().unwrap();
+        let sprite: CompositionSpriteShape = first_child.cast()?;
+        let fill_color = if let Some(fill_brush) = sprite.FillBrush().as_option()? {
+            let fill_brush: CompositionColorBrush = fill_brush.cast()?;
+            Some(fill_brush.Color()?)
+        } else {
+            None
+        };
+        let stroke_color = if let Some(stroke_brush) = sprite.StrokeBrush().as_option()? {
+            let stroke_brush: CompositionColorBrush = stroke_brush.cast()?;
+            Some(stroke_brush.Color()?)
+        } else {
+            None
+        };
+        println!("Fill Color: {:?}", fill_color);
+        println!("Stroke Color: {:?}", stroke_color);
+    } else {
+        let container: Option<CompositionContainerShape> = shape.try_cast()?;
+        if let Some(container) = container {
+            for child in container.Shapes()? {
+                process_shape_for_info_dump(&child, comment_query)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn king_of_diamonds_info_dump() -> Result<()> {
+    unsafe { RoInitialize(RO_INIT_MULTITHREADED)? };
+    let runtime = TestRuntime::new()?;
+    let shape_info = runtime.load_svg("card_faces", "king_of_diamonds")?;
+    let shape = shape_info.root_shape.cast()?;
+    process_shape_for_info_dump(&shape, "path5-8")?;
     Ok(())
 }

@@ -1,9 +1,9 @@
 #[cfg(test)]
 mod tests;
 
+use robmikh_common::universal::null_return::NullReturn;
 use std::{collections::VecDeque, rc::Rc};
 use windows::core::{Interface, Result};
-use windows::Win32::Foundation::S_OK;
 use windows::Win32::Graphics::Direct2D::D2D1_SVG_ATTRIBUTE_POD_TYPE_MATRIX;
 
 use windows::{
@@ -77,7 +77,11 @@ pub fn convert_svg_document_to_composition_shapes(
     unsafe { root_element.GetFirstChild(&mut child) };
     while child.is_some() {
         process_svg_element(&mut presentation_stack, &container, child.as_ref().unwrap())?;
-        child = unsafe { root_element.get_next_child_workaround(child.as_ref().unwrap())? };
+        child = unsafe {
+            root_element
+                .GetNextChild(child.as_ref().unwrap())
+                .as_option()?
+        };
     }
 
     Ok(SvgCompositionShapes {
@@ -349,7 +353,7 @@ fn process_svg_element(
         let current_shape = compositor.CreateContainerShape()?;
         parent_shape.Shapes()?.Append(&current_shape)?;
 
-        let current_presentation = &presentation_stack[0];
+        let current_presentation = presentation_stack.back().unwrap();
         let mut presentation = current_presentation.clone();
 
         // Record the id for debugging
@@ -359,9 +363,6 @@ fn process_svg_element(
                 .as_bool()
         } {
             let id = get_id_attribute(&element, "id")?;
-            //if id == "path5-8" {
-            //    println!("woop");
-            //}
             current_shape.SetComment(id)?;
         }
 
@@ -507,38 +508,11 @@ fn process_svg_element(
             unsafe { current.GetFirstChild(&mut child) };
             while child.is_some() {
                 process_svg_element(presentation_stack, &current_shape, child.as_ref().unwrap())?;
-                child = unsafe { current.get_next_child_workaround(child.as_ref().unwrap())? };
+                child = unsafe { current.GetNextChild(child.as_ref().unwrap()).as_option()? };
             }
         }
 
         presentation_stack.pop_back();
     }
     Ok(())
-}
-
-// Workaround for metadata bug
-trait GetNextChildWorkaround {
-    unsafe fn get_next_child_workaround(
-        &self,
-        reference_child: &ID2D1SvgElement,
-    ) -> Result<Option<ID2D1SvgElement>>;
-}
-
-impl GetNextChildWorkaround for ID2D1SvgElement {
-    unsafe fn get_next_child_workaround(
-        &self,
-        reference_child: &ID2D1SvgElement,
-    ) -> Result<Option<ID2D1SvgElement>> {
-        let result = self.GetNextChild(reference_child);
-        match result {
-            Ok(element) => Ok(Some(element)),
-            Err(error) => {
-                if error.code() == S_OK {
-                    Ok(None)
-                } else {
-                    Err(error.into())
-                }
-            }
-        }
-    }
 }
