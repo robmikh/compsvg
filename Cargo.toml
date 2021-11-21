@@ -6,7 +6,8 @@ edition = "2021"
 [dependencies]
 
 [dependencies.robmikh-common]
-path = "../robmikh-common-rs"
+git = "https://github.com/robmikh/robmikh-common-rs"
+version = "0.1.0"
 features = [
     "d3d",
     "d2d",
@@ -30,7 +31,8 @@ features = [
 ]
 
 [dev-dependencies.robmikh-common]
-path = "../robmikh-common-rs"
+git = "https://github.com/robmikh/robmikh-common-rs"
+version = "0.1.0"
 features = [
     "dispatcher-queue-desktop",
     "stream",
