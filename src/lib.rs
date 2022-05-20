@@ -9,15 +9,12 @@ use windows::Win32::Graphics::Direct2D::D2D1_SVG_ATTRIBUTE_POD_TYPE_MATRIX;
 use windows::{
     Foundation::Numerics::{Matrix3x2, Vector2},
     Graphics::IGeometrySource2D,
-    Win32::{
-        Foundation::PWSTR,
-        Graphics::Direct2D::{
-            Common::{D2D1_COLOR_F, D2D1_FILL_MODE_ALTERNATE, D2D_MATRIX_3X2_F},
-            ID2D1SvgAttribute, ID2D1SvgDocument, ID2D1SvgElement, ID2D1SvgPaint, ID2D1SvgPathData,
-            D2D1_SVG_ATTRIBUTE_POD_TYPE_COLOR, D2D1_SVG_ATTRIBUTE_POD_TYPE_FLOAT,
-            D2D1_SVG_ATTRIBUTE_POD_TYPE_VIEWBOX, D2D1_SVG_ATTRIBUTE_STRING_TYPE_ID,
-            D2D1_SVG_PAINT_TYPE_COLOR, D2D1_SVG_PAINT_TYPE_URI, D2D1_SVG_VIEWBOX,
-        },
+    Win32::Graphics::Direct2D::{
+        Common::{D2D1_COLOR_F, D2D1_FILL_MODE_ALTERNATE, D2D_MATRIX_3X2_F},
+        ID2D1SvgAttribute, ID2D1SvgDocument, ID2D1SvgElement, ID2D1SvgPaint, ID2D1SvgPathData,
+        D2D1_SVG_ATTRIBUTE_POD_TYPE_COLOR, D2D1_SVG_ATTRIBUTE_POD_TYPE_FLOAT,
+        D2D1_SVG_ATTRIBUTE_POD_TYPE_VIEWBOX, D2D1_SVG_ATTRIBUTE_STRING_TYPE_ID,
+        D2D1_SVG_PAINT_TYPE_COLOR, D2D1_SVG_PAINT_TYPE_URI, D2D1_SVG_VIEWBOX,
     },
     UI::{
         Color, Colors,
@@ -28,7 +25,7 @@ use windows::{
     },
 };
 
-use robmikh_common::universal::{d2d::GeometrySource, try_cast::TryCast, wide_string::ToWide};
+use robmikh_common::universal::{d2d::GeometrySource, try_cast::TryCast};
 
 pub struct SvgCompositionShapes {
     pub view_box: Option<CompositionViewBox>,
@@ -49,10 +46,8 @@ pub fn convert_svg_document_to_composition_shapes(
     let tag = get_tag(&root_element)?;
     assert_eq!(&tag, "svg");
 
-    let view_box = if unsafe {
-        root_element.IsAttributeSpecified("viewBox".to_wide().as_pwstr(), std::ptr::null_mut())
-    }
-    .as_bool()
+    let view_box = if unsafe { root_element.IsAttributeSpecified("viewBox", std::ptr::null_mut()) }
+        .as_bool()
     {
         let rect = get_rectangle_attribute(&root_element, "viewBox")?;
         let view_box = compositor.CreateViewBox()?;
@@ -150,7 +145,7 @@ impl IBrushInfo for LinearGradientBrushInfo {
 fn get_tag(element: &ID2D1SvgElement) -> Result<String> {
     let length = unsafe { element.GetTagNameLength() };
     let mut name = vec![0u16; (length + 1) as usize];
-    unsafe { element.GetTagName(PWSTR(name.as_mut_ptr()), name.len() as u32)? };
+    unsafe { element.GetTagName(name.as_mut_slice())? };
     name.resize(length as usize, 0);
     let name = String::from_utf16_lossy(&name);
     Ok(name)
@@ -163,7 +158,7 @@ fn get_rectangle_attribute(
     let mut rect = D2D1_SVG_VIEWBOX::default();
     unsafe {
         element.GetAttributeValue2(
-            attribute_name.to_wide().as_pwstr(),
+            attribute_name,
             D2D1_SVG_ATTRIBUTE_POD_TYPE_VIEWBOX,
             &mut rect as *mut _ as *mut _,
             std::mem::size_of::<D2D1_SVG_VIEWBOX>() as u32,
@@ -173,18 +168,15 @@ fn get_rectangle_attribute(
 }
 
 fn get_id_attribute(element: &ID2D1SvgElement, attribute_name: &str) -> Result<String> {
-    let attribute_name = attribute_name.to_wide();
     let attribute_length = unsafe {
-        element
-            .GetAttributeValueLength(attribute_name.as_pwstr(), D2D1_SVG_ATTRIBUTE_STRING_TYPE_ID)?
+        element.GetAttributeValueLength(attribute_name, D2D1_SVG_ATTRIBUTE_STRING_TYPE_ID)?
     };
     let mut data = vec![0u16; (attribute_length + 1) as usize];
     unsafe {
         element.GetAttributeValue3(
-            attribute_name.as_pwstr(),
+            attribute_name,
             D2D1_SVG_ATTRIBUTE_STRING_TYPE_ID,
-            PWSTR(data.as_mut_ptr()),
-            data.len() as u32,
+            data.as_mut_slice(),
         )?
     };
     data.resize(attribute_length as usize, 0);
@@ -200,14 +192,7 @@ fn get_specified_attributes(element: &ID2D1SvgElement) -> Result<Vec<String>> {
             element.GetSpecifiedAttributeNameLength(i, &mut length, &mut false.into())?;
         }
         let mut name = vec![0u16; (length + 1) as usize];
-        unsafe {
-            element.GetSpecifiedAttributeName(
-                i,
-                PWSTR(name.as_mut_ptr()),
-                name.len() as u32,
-                &mut false.into(),
-            )?
-        };
+        unsafe { element.GetSpecifiedAttributeName(i, name.as_mut_slice(), &mut false.into())? };
         name.resize(length as usize, 0);
         names.push(String::from_utf16_lossy(&name));
     }
@@ -218,7 +203,7 @@ fn get_float_attribute(element: &ID2D1SvgElement, attribute_name: &str) -> Resul
     let mut value: f32 = 0.0;
     unsafe {
         element.GetAttributeValue2(
-            attribute_name.to_wide().as_pwstr(),
+            attribute_name,
             D2D1_SVG_ATTRIBUTE_POD_TYPE_FLOAT,
             &mut value as *mut _ as *mut _,
             std::mem::size_of::<f32>() as u32,
@@ -231,7 +216,7 @@ fn get_color_attribute(element: &ID2D1SvgElement, attribute_name: &str) -> Resul
     let mut value = D2D1_COLOR_F::default();
     unsafe {
         element.GetAttributeValue2(
-            attribute_name.to_wide().as_pwstr(),
+            attribute_name,
             D2D1_SVG_ATTRIBUTE_POD_TYPE_COLOR,
             &mut value as *mut _ as *mut _,
             std::mem::size_of::<D2D1_COLOR_F>() as u32,
@@ -260,9 +245,11 @@ fn create_linear_gradient_brush_info(element: &ID2D1SvgElement) -> Result<Rc<Box
 
 fn create_brush_info_from_id(
     document: &ID2D1SvgDocument,
-    mut id: Vec<u16>,
+    id: Vec<u16>,
 ) -> Result<Option<Rc<Box<dyn IBrushInfo>>>> {
-    let reference = unsafe { document.FindElementById(PWSTR(id.as_mut_ptr()))? };
+    // TODO: Avoid this unnecessary transformation
+    let id = String::from_utf16(&id).unwrap();
+    let reference = unsafe { document.FindElementById(id.as_str())? };
     let tag = get_tag(&reference)?;
     if tag == "linearGradient" {
         Ok(Some(create_linear_gradient_brush_info(&reference)?))
@@ -277,10 +264,7 @@ fn get_brush_info(
 ) -> Result<Option<Rc<Box<dyn IBrushInfo>>>> {
     let attribute: ID2D1SvgAttribute = unsafe {
         let mut attribute = None;
-        element.GetAttributeValue(
-            attribute_name.to_wide().as_pwstr(),
-            &mut attribute as *mut _,
-        )?;
+        element.GetAttributeValue(attribute_name, &mut attribute as *mut _)?;
         attribute.unwrap()
     };
     if let Some(paint_attribute) = attribute.try_cast::<ID2D1SvgPaint>()? {
@@ -296,7 +280,7 @@ fn get_brush_info(
             D2D1_SVG_PAINT_TYPE_URI => {
                 let length = unsafe { paint_attribute.GetIdLength() };
                 let mut id = vec![0u16; (length + 1) as usize];
-                unsafe { paint_attribute.GetId(PWSTR(id.as_mut_ptr()), length)? };
+                unsafe { paint_attribute.GetId(id.as_mut_slice())? };
                 id.resize(length as usize, 0);
                 let mut document = None;
                 unsafe { element.GetDocument(&mut document) };
@@ -322,7 +306,7 @@ fn get_transform_attribute(element: &ID2D1SvgElement, attribute_name: &str) -> R
     let mut value = Matrix3x2::default();
     unsafe {
         element.GetAttributeValue2(
-            attribute_name.to_wide().as_pwstr(),
+            attribute_name,
             D2D1_SVG_ATTRIBUTE_POD_TYPE_MATRIX,
             &mut value as *mut _ as *mut _,
             std::mem::size_of::<D2D_MATRIX_3X2_F>() as u32,
@@ -359,7 +343,7 @@ fn process_svg_element(
         // Record the id for debugging
         if unsafe {
             current
-                .IsAttributeSpecified("id".to_wide().as_pwstr(), std::ptr::null_mut())
+                .IsAttributeSpecified("id", std::ptr::null_mut())
                 .as_bool()
         } {
             let id = get_id_attribute(&element, "id")?;
@@ -411,8 +395,7 @@ fn process_svg_element(
                 let mut document = None;
                 unsafe { current.GetDocument(&mut document) };
                 let document = document.unwrap();
-                let reference =
-                    unsafe { document.FindElementById(href.as_str().to_wide().as_pwstr())? };
+                let reference = unsafe { document.FindElementById(href.as_str())? };
                 process_svg_element(presentation_stack, &current_shape, &reference)?;
             }
             "circle" => {
@@ -464,8 +447,7 @@ fn process_svg_element(
             "path" => {
                 let attribute: ID2D1SvgAttribute = unsafe {
                     let mut attribute = None;
-                    element
-                        .GetAttributeValue("d".to_wide().as_pwstr(), &mut attribute as *mut _)?;
+                    element.GetAttributeValue("d", &mut attribute as *mut _)?;
                     attribute.unwrap()
                 };
                 let path_attribute: ID2D1SvgPathData = attribute.cast()?;

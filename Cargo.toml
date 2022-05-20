@@ -7,17 +7,16 @@ edition = "2021"
 
 [dependencies.robmikh-common]
 git = "https://github.com/robmikh/robmikh-common-rs"
-rev = "b2d0a14384f4b0032a4d3b3d2e747e18493c4c95"
+rev = "b5eb775457e1168be46831d7d67130419bb821e7"
 features = [
     "d3d",
     "d2d",
 ]
 
 [dependencies.windows]
-version = "0.28.0"
+version = "0.37.0"
 features = [
     "alloc",
-    "build",
     "Foundation",
     "Foundation_Collections",
     "Foundation_Metadata",
@@ -32,14 +31,14 @@ features = [
 
 [dev-dependencies.robmikh-common]
 git = "https://github.com/robmikh/robmikh-common-rs"
-rev = "b2d0a14384f4b0032a4d3b3d2e747e18493c4c95"
+rev = "b5eb775457e1168be46831d7d67130419bb821e7"
 features = [
     "dispatcher-queue-desktop",
     "stream",
 ]
 
 [dev-dependencies.windows]
-version = "0.28.0"
+version = "0.37.0"
 features = [
     "Graphics",
     "Graphics_DirectX",
